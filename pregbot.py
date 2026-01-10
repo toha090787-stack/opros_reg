@@ -51,7 +51,7 @@ async def main():
     # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
     # Запуск задачи ежедневно в 18:00
-    scheduler.add_job(send_daily_poll, 'cron', hour=0, minute=40)
+    scheduler.add_job(send_daily_poll, 'cron', hour=18, minute=00)
     scheduler.start()
 
     logging.info("Бот запущен и планировщик активирован.")
