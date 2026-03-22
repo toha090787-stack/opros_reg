@@ -1,35 +1,34 @@
 import asyncio
 import logging
+import settings
 from datetime import datetime, timedelta
-
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import settings
 
-# --- Конфигурация ---
+# Конфигурация
 API_TOKEN = settings.API_TOKEN
-GROUP_ID = "-1003166538020"  # ID вашей группы
+GROUP_ID = '-1003166538020'  # ID группы (число со знаком минус, например -100...)
 
-# ВАЖНО: укажите здесь рабочий прокси Socks5
-# Если прокси не нужен, оставьте строку пустой ""
-PROXY_URL = "socks5://85.198.96.242:3128" 
-# Пример: PROXY_URL = "socks5://user123:pass456@192.168.1.1:1080"
+# Инициализация бота и диспетчера
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher()
 
-# --- Логирование ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger(__name__)
 
-# --- Отправка опроса ---
-async def send_daily_poll(bot: Bot):
+async def send_daily_poll():
+    """Функция для создания и отправки опроса"""
+    # Вычисляем даты
     today = datetime.now()
     tomorrow = today + timedelta(days=1)
-    question = f"Меня можно будить в ночь с {today.strftime('%d.%m')} на {tomorrow.strftime('%d.%m')}"
 
+    date_str = today.strftime("%d.%m")
+    tomorrow_str = tomorrow.strftime("%d.%m")
+
+    question = f"Меня можно будить в ночь с {date_str} на {tomorrow_str}"
     options = [
         "Регистратором на выезд, экипаж",
         "Регистратором на выезд, нет экипажа",
         "Регистратором на автоном",
-        "Не будить",
+        "Не будить"
     ]
 
     try:
@@ -37,41 +36,32 @@ async def send_daily_poll(bot: Bot):
             chat_id=GROUP_ID,
             question=question,
             options=options,
-            is_anonymous=False,
-            allows_multiple_answers=True,
+            is_anonymous=False,  # Чтобы видеть, кто ответил
+            allows_multiple_answers=True
         )
-        logger.info("✅ Опрос успешно отправлен.")
+        logging.info(f"Опрос отправлен в {datetime.now()}")
     except Exception as e:
-        logger.error(f"❌ Ошибка при отправке опроса: {e}")
+        logging.error(f"Ошибка при отправке опроса: {e}")
 
-# --- Основной цикл ---
+
 async def main():
-    logger.info("🚀 Запуск бота...")
+    # Настройка логирования
+    logging.basicConfig(level=logging.INFO)
 
-    # Создаем бота. Если PROXY_URL не пустая, он будет использовать прокси.
-    bot = Bot(token=API_TOKEN, proxy=PROXY_URL)
-    dp = Dispatcher()
-
-    # Планировщик задач
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    scheduler.add_job(send_daily_poll, "cron", hour=21, minute=54, args=[bot])
+    # Настройка планировщика
+    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
+    # Запуск задачи ежедневно в 18:00
+    scheduler.add_job(send_daily_poll, 'cron', hour=22, minute=00)
     scheduler.start()
 
-    # Проверка соединения с Telegram
-    try:
-        me = await bot.get_me()
-        logger.info(f"🤖 Бот подключен как @{me.username}")
-        logger.info(f"🌐 Используется прокси: {'ДА' if PROXY_URL else 'НЕТ'}")
-    except Exception as e:
-        logger.error(f"🚫 Критическая ошибка при подключении к Telegram: {e}")
-        return # Выходим, если не удалось авторизоваться
+    logging.info("Бот запущен и планировщик активирован.")
 
-    # Запуск бота (Polling)
     try:
-        logger.info("🟢 Запускаем polling...")
+        # Запуск бота
         await dp.start_polling(bot)
-    except Exception as e:
-        logger.error(f"❌ Ошибка в работе бота: {e}", exc_info=True)
+    finally:
+        await bot.session.close()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())
