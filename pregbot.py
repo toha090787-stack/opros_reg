@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 # Настройка aiohttp-сессии с DNS-кэшем
 connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
+
+from aiohttp_socks import ProxyConnector
+from aiogram.client.session.aiohttp import AiohttpSession
+
+PROXY_URL = "socks5://user:password@ip:port"  # или прокси без авторизации: socks5://ip:port
+
+connector = ProxyConnector.from_url(PROXY_URL)
+session = AiohttpSession(connector=connector)
+bot = Bot(token=settings.API_TOKEN, session=session)
 bot = Bot(token=API_TOKEN, connector=connector)
 dp = Dispatcher()
 
@@ -60,7 +69,7 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
     # Запуск опроса ежедневно в 18:00 (укажи нужное время)
-    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=05)
+    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=10)
     scheduler.start()
 
     while True:
