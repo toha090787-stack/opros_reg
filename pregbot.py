@@ -2,51 +2,34 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
-import settings
 from aiogram import Bot, Dispatcher
-from aiogram.exceptions import TelegramNetworkError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import aiohttp
+import settings
 
-# Конфигурация
+# --- Конфигурация ---
 API_TOKEN = settings.API_TOKEN
-GROUP_ID = '-1003166538020'  # ID группы
+GROUP_ID = "-1003166538020"  # ID вашей группы
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+# ВАЖНО: укажите здесь рабочий прокси Socks5
+# Если прокси не нужен, оставьте строку пустой ""
+PROXY_URL = "socks5://85.198.96.242:3128" 
+# Пример: PROXY_URL = "socks5://user123:pass456@192.168.1.1:1080"
+
+# --- Логирование ---
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# Настройка aiohttp-сессии с DNS-кэшем
-connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
-
-from aiohttp_socks import ProxyConnector
-from aiogram.client.session.aiohttp import AiohttpSession
-
-PROXY_URL = "socks5://user:password@ip:port"  # или прокси без авторизации: socks5://ip:port
-
-connector = ProxyConnector.from_url(PROXY_URL)
-session = AiohttpSession(connector=connector)
-bot = Bot(token=settings.API_TOKEN, session=session)
-bot = Bot(token=API_TOKEN, connector=connector)
-dp = Dispatcher()
-
-async def send_daily_poll():
-    """Создание и отправка опроса в чат"""
+# --- Отправка опроса ---
+async def send_daily_poll(bot: Bot):
     today = datetime.now()
     tomorrow = today + timedelta(days=1)
+    question = f"Меня можно будить в ночь с {today.strftime('%d.%m')} на {tomorrow.strftime('%d.%m')}"
 
-    date_str = today.strftime("%d.%m")
-    tomorrow_str = tomorrow.strftime("%d.%m")
-
-    question = f"Меня можно будить в ночь с {date_str} на {tomorrow_str}"
     options = [
         "Регистратором на выезд, экипаж",
         "Регистратором на выезд, нет экипажа",
         "Регистратором на автоном",
-        "Не будить"
+        "Не будить",
     ]
 
     try:
@@ -55,39 +38,40 @@ async def send_daily_poll():
             question=question,
             options=options,
             is_anonymous=False,
-            allows_multiple_answers=True
+            allows_multiple_answers=True,
         )
-        logger.info(f"✅ Опрос отправлен в {datetime.now().strftime('%H:%M:%S')}")
+        logger.info("✅ Опрос успешно отправлен.")
     except Exception as e:
         logger.error(f"❌ Ошибка при отправке опроса: {e}")
 
+# --- Основной цикл ---
 async def main():
-    """Основная логика с автоматическим переподключением"""
-    logger.info("🚀 Запуск бота и планировщика...")
+    logger.info("🚀 Запуск бота...")
 
-    # Настройка планировщика задач
+    # Создаем бота. Если PROXY_URL не пустая, он будет использовать прокси.
+    bot = Bot(token=API_TOKEN, proxy=PROXY_URL)
+    dp = Dispatcher()
+
+    # Планировщик задач
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-
-    # Запуск опроса ежедневно в 18:00 (укажи нужное время)
-    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=10)
+    scheduler.add_job(send_daily_poll, "cron", hour=21, minute=54, args=[bot])
     scheduler.start()
 
-    while True:
-        try:
-            logger.info("🤖 Бот запущен. Ожидаем события...")
-            await dp.start_polling(bot)
+    # Проверка соединения с Telegram
+    try:
+        me = await bot.get_me()
+        logger.info(f"🤖 Бот подключен как @{me.username}")
+        logger.info(f"🌐 Используется прокси: {'ДА' if PROXY_URL else 'НЕТ'}")
+    except Exception as e:
+        logger.error(f"🚫 Критическая ошибка при подключении к Telegram: {e}")
+        return # Выходим, если не удалось авторизоваться
 
-        except TelegramNetworkError as e:
-            logger.warning(f"⚠️ Сетевая ошибка Telegram: {e}. Повтор через 15 секунд...")
-            await asyncio.sleep(15)
+    # Запуск бота (Polling)
+    try:
+        logger.info("🟢 Запускаем polling...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"❌ Ошибка в работе бота: {e}", exc_info=True)
 
-        except aiohttp.ClientConnectorError as e:
-            logger.warning(f"🌐 Ошибка подключения: {e}. Повтор через 20 секунд...")
-            await asyncio.sleep(20)
-
-        except Exception as e:
-            logger.error(f"❌ Неизвестная ошибка: {e}", exc_info=True)
-            await asyncio.sleep(30)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
