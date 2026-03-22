@@ -1,22 +1,31 @@
 import asyncio
 import logging
-import settings
 from datetime import datetime, timedelta
+
+import settings
 from aiogram import Bot, Dispatcher
+from aiogram.exceptions import TelegramNetworkError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import aiohttp
 
 # Конфигурация
 API_TOKEN = settings.API_TOKEN
-GROUP_ID = '-1003166538020'  # ID группы (число со знаком минус, например -100...)
+GROUP_ID = '-1003166538020'  # ID группы
 
-# Инициализация бота и диспетчера
-bot = Bot(token=API_TOKEN)
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+# Настройка aiohttp-сессии с DNS-кэшем
+connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
+bot = Bot(token=API_TOKEN, connector=connector)
 dp = Dispatcher()
 
-
 async def send_daily_poll():
-    """Функция для создания и отправки опроса"""
-    # Вычисляем даты
+    """Создание и отправка опроса в чат"""
     today = datetime.now()
     tomorrow = today + timedelta(days=1)
 
@@ -36,32 +45,40 @@ async def send_daily_poll():
             chat_id=GROUP_ID,
             question=question,
             options=options,
-            is_anonymous=False,  # Чтобы видеть, кто ответил
+            is_anonymous=False,
             allows_multiple_answers=True
         )
-        logging.info(f"Опрос отправлен в {datetime.now()}")
+        logger.info(f"✅ Опрос отправлен в {datetime.now().strftime('%H:%M:%S')}")
     except Exception as e:
-        logging.error(f"Ошибка при отправке опроса: {e}")
-
+        logger.error(f"❌ Ошибка при отправке опроса: {e}")
 
 async def main():
-    # Настройка логирования
-    logging.basicConfig(level=logging.INFO)
+    """Основная логика с автоматическим переподключением"""
+    logger.info("🚀 Запуск бота и планировщика...")
 
-    # Настройка планировщика
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
-    # Запуск задачи ежедневно в 18:00
-    scheduler.add_job(send_daily_poll, 'cron', hour=18, minute=00)
+    # Настройка планировщика задач
+    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+
+    # Запуск опроса ежедневно в 18:00 (укажи нужное время)
+    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=05)
     scheduler.start()
 
-    logging.info("Бот запущен и планировщик активирован.")
+    while True:
+        try:
+            logger.info("🤖 Бот запущен. Ожидаем события...")
+            await dp.start_polling(bot)
 
-    try:
-        # Запуск бота
-        await dp.start_polling(bot)
-    finally:
-        await bot.session.close()
+        except TelegramNetworkError as e:
+            logger.warning(f"⚠️ Сетевая ошибка Telegram: {e}. Повтор через 15 секунд...")
+            await asyncio.sleep(15)
 
+        except aiohttp.ClientConnectorError as e:
+            logger.warning(f"🌐 Ошибка подключения: {e}. Повтор через 20 секунд...")
+            await asyncio.sleep(20)
+
+        except Exception as e:
+            logger.error(f"❌ Неизвестная ошибка: {e}", exc_info=True)
+            await asyncio.sleep(30)
 
 if __name__ == '__main__':
     asyncio.run(main())
