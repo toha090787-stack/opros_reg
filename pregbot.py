@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Конфигурация
-API_TOKEN = settings.API_TOKEN
+API_TOKEN = 8487850017:AAHdZlmYgs6YGW65FtkkvcoVvlTrTt4yCh8
 GROUP_ID = '-1003166538020'  # ID группы (число со знаком минус, например -100...)
 
 # Инициализация бота и диспетчера
