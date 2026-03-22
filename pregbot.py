@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Конфигурация
-API_TOKEN = 8487850017:AAHdZlmYgs6YGW65FtkkvcoVvlTrTt4yCh8
+API_TOKEN = "8487850017:AAHdZlmYgs6YGW65FtkkvcoVvlTrTt4yCh8"
 GROUP_ID = '-1003166538020'  # ID группы (число со знаком минус, например -100...)
 
 # Инициализация бота и диспетчера
@@ -51,7 +51,7 @@ async def main():
     # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
     # Запуск задачи ежедневно в 18:00
-    scheduler.add_job(send_daily_poll, 'cron', hour=22, minute=20)
+    scheduler.add_job(send_daily_poll, 'cron', hour=22, minute=22)
     scheduler.start()
 
     logging.info("Бот запущен и планировщик активирован.")
