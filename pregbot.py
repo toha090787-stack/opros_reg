@@ -25,10 +25,10 @@ async def send_daily_poll():
 
     question = f"Меня можно будить в ночь с {date_str} на {tomorrow_str}"
     options = [
-        "На выезд в СПб, экипаж",
-        "На выезд в СПб, нет экипажа",
-        "На выезд в ЛО, экипаж",
-        "На выезд в ЛО, нет экипажа",
+        "На выезд СПб, экипаж",
+        "На выезд СПб, нет экипажа",
+        "На выезд ЛО, экипажа",
+        "На выезд ЛО, нет экипажа",
         "На автоном",
         "Не будить"
     ]
@@ -53,7 +53,7 @@ async def main():
     # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
     # Запуск задачи ежедневно в 18:00
-    scheduler.add_job(send_daily_poll, 'cron', hour=20, minute=30)
+    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=05)
     scheduler.start()
 
     logging.info("Бот запущен и планировщик активирован.")
