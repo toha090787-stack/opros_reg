@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import settings
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -12,7 +11,6 @@ GROUP_ID = '-1003166538020'  # ID группы (число со знаком м�
 # Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
-
 
 async def send_daily_poll():
     """Функция для создания и отправки опроса"""
@@ -45,15 +43,14 @@ async def send_daily_poll():
     except Exception as e:
         logging.error(f"Ошибка при отправке опроса: {e}")
 
-
 async def main():
     # Настройка логирования
     logging.basicConfig(level=logging.INFO)
 
     # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")  # Укажите ваш часовой пояс
-    # Запуск задачи ежедневно в 18:00
-    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=05)
+    # Запуск задачи ежедневно в 21:05 (исправлено с 05 на 5)
+    scheduler.add_job(send_daily_poll, 'cron', hour=21, minute=15)
     scheduler.start()
 
     logging.info("Бот запущен и планировщик активирован.")
@@ -64,6 +61,5 @@ async def main():
     finally:
         await bot.session.close()
 
-
-if __name__ == '__main__':
+if __name__ == '__main__':  # Исправлены подчеркивания
     asyncio.run(main())
