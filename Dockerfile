@@ -1,22 +1,20 @@
+# Используем официальный легкий образ Python 3.11
 FROM python:3.11-slim
 
-WORKDIR /app
-
-# Отключаем буферизацию логов, чтобы сразу видеть ошибки в консоли
-ENV PYTHONDONTWRITEBYTECODE=1
+# Настраиваем часовой пояс сервера внутри контейнера на МСК
+ENV TZ=Europe/Moscow
 ENV PYTHONUNBUFFERED=1
 
-# Устанавливаем зависимости
+# Создаем рабочую директорию в контейнере
+WORKDIR /app
+
+# Копируем файл зависимостей и устанавливаем их
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копируем остальной код
+# Копируем весь исходный код проекта в контейнер
 COPY . .
 
-# Создаем папку для данных
-ENV DATA_DIR=/app/data
-RUN mkdir -p /app/data && chmod 777 /app/data
-
-# Запускаем скрипт (замените main.py на имя вашего файла, если назовете иначе)
+# Запускаем нашего бота
 CMD ["python", "main.py"]
