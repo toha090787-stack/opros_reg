@@ -71,7 +71,7 @@ async def main() -> None:
   scheduler = AsyncIOScheduler(timezone=ZoneInfo("Europe/Moscow"))
 
   # Настраиваем отправку каждый день в 18:00
-  scheduler.add_job(send_daily_poll, "cron", hour=17, minute=30, args=[bot])
+  scheduler.add_job(send_daily_poll, "cron", hour=17, minute=15, args=[bot])
   scheduler.start()
 
   logging.info(
