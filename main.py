@@ -8,18 +8,26 @@ from zoneinfo import ZoneInfo
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN", "ВАШ_ТОКЕН_БОТА")
-# ID группы, куда отправлять опрос (например, -1001234567890)
+# ID вашей группы
 GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID", "-1003166538020")
 
 dp = Dispatcher()
 
+# Обработчик для ручной проверки отправки опроса по командам /start или /test
+@dp.message(CommandStart())
+@dp.message(Command("test"))
+async def test_poll_handler(message: Message):
+  await send_daily_poll(message.bot)
+
 # Функция отправки опроса
 async def send_daily_poll(bot: Bot):
-  if not GROUP_CHAT_ID or GROUP_CHAT_ID == "-1003166538020":
+  if not GROUP_CHAT_ID or GROUP_CHAT_ID == "ВАШ_ID_ГРУППЫ":
     logging.error("❌ ОШИБКА: Не указан ID группы (GROUP_CHAT_ID)!")
     return
 
@@ -49,8 +57,8 @@ async def send_daily_poll(bot: Bot):
         chat_id=GROUP_CHAT_ID,
         question=question,
         options=options,
-        is_anonymous=False,  # Открытый опрос, чтобы было видно, кто ответил
-        allows_multiple_answers=False,  # Можно выбрать только один вариант
+        is_anonymous=False,  # Открытый опрос
+        allows_multiple_answers=False,  # Только один вариант
     )
     logging.info(f"✅ Ежедневный опрос успешно отправлен в группу {GROUP_CHAT_ID}")
   except Exception as e:
@@ -70,8 +78,8 @@ async def main() -> None:
   # Инициализируем планировщик с часовым поясом Москвы
   scheduler = AsyncIOScheduler(timezone=ZoneInfo("Europe/Moscow"))
 
-  # Настраиваем отправку каждый день в 18:00
-  scheduler.add_job(send_daily_poll, "cron", hour=17, minute=15, args=[bot])
+  # Настраиваем отправку каждый день в 18:00 МСК
+  scheduler.add_job(send_daily_poll, "cron", hour=18, minute=0, args=[bot])
   scheduler.start()
 
   logging.info(
